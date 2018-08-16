@@ -98,13 +98,12 @@ func (g Gif) save() (bool, error) {
 	return true, nil
 }
 
-func find(checksum string) (Gif, error) {
-	var gif Gif
-	err := db.View(func(tx *bolt.Tx) error {
+func find(checksum string) (gif Gif, err error) {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 		v := b.Get([]byte(checksum))
 		json.Unmarshal(v, &gif)
 		return nil
 	})
-	return gif, err
+	return
 }
