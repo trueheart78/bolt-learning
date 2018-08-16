@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	bolt "github.com/coreos/bbolt"
@@ -22,9 +23,10 @@ type Gif struct {
 
 func main() {
 	var gifs []Gif
-	gifs = append(gifs, Gif{"abc", "taylor.gif", 123, 0})
-	gifs = append(gifs, Gif{"def", "swift.gif", 234, 0})
-	gifs = append(gifs, Gif{"ghi", "rocks.gif", 345, 1})
+	var abcs = strings.Split("abcdefghijklmnopqrstuvwxyz1234567890", "")
+	for _, a := range abcs {
+		gifs = append(gifs, Gif{a + "-12345", "taylor-" + a + ".gif", 123, 0})
+	}
 
 	// save all data
 	for _, g := range gifs {
@@ -50,8 +52,13 @@ func main() {
 		fmt.Println(a)
 	}
 
-	a, _ := find("abc")
-	fmt.Println(a)
+	_, err := find("abc")
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	s, _ := count()
+	fmt.Println(s, "records stored")
 }
 
 func initDB() *bolt.DB {
@@ -102,8 +109,22 @@ func find(checksum string) (gif Gif, err error) {
 	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(bucketName))
 		v := b.Get([]byte(checksum))
-		json.Unmarshal(v, &gif)
+		if v != nil {
+			json.Unmarshal(v, &gif)
+		} else {
+			return fmt.Errorf("Unable to find id \"%s\"", checksum)
+		}
 		return nil
 	})
 	return
+}
+
+func count() (int, error) {
+	var s bolt.BucketStats
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucketName))
+		s = b.Stats()
+		return nil
+	})
+	return s.KeyN, nil
 }
